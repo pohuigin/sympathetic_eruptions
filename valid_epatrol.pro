@@ -1,115 +1,94 @@
-;Make movie of EruptionPatrol Event
-;Run this from the project root directory
+;+
+;Name:
 ;
-;1. List HEK Events
-;2. Download 304 data for the event
-;3. make a movie of the event
-;4. record the source position of the event
-;5. make a jmap image of the event
-;6. record the initiation time of the event
-;7. output the event data into a the csv database
+;     valid_epatrol
+;     
+;Purpose:
+;
+;     Track events at in a given time range
+;
+;Calling Sequence:
+;
+;     valid_epatrol, [ minvalue, maxvalue ]
+;
+;Optional Inputs:
+;     
+;     minvalue = The cluster to begin at
+;     maxvalue = The cluster to stop at
+;
+;Outputs:
+;
+;     Will output values into a csv under the default title of: fe_times_sources.txt
+;     
+;Some notes:
+;     The program will read in values from compile_eventlist_visual_search_clusters_test.txt by default
+;     The default cadence is 1 frame every 12 minutes
+;     The first cluster is cluster #0
+;
+;Author:
+;     
+;     George Lee
+;     Intern At LMASAL
+;     Email: glee@lmsal.com
+;
+;
+;Running this program:
+;     Type in valid_epatrol
+;To pick up where you left off,
+;     Type in valid_epatrol, cluster
+;
+;This program will also work when working on clusters in a specified range
+;     valid_epatrol, min, max
+;-
 
-pro run_epatrol, minvalue, maxvalue
-    add_PATH, '/Users/glee/git/get_data/', /exp
-    add_PATH, '/Users/glee/git/gen_library/', /exp
+pro run_epatrol, whichevent, infile, logfilein, verb=verb
 
-logfile='fe_times_sources.txt'
-infile= 'compile_eventlist_visual_search_clusters_test.txt'
-
-
-file = read_data_file(infile)
-if(~file_test(logfile)) then begin
-  thisline={available:'',cluster:'', flare:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
-  write_data_file,thisline,filecsv=logfile,/nodata
-  print, 'New File Written'
-endif
-
-if (minvalue eq !NULL) then begin
-  minval = 0
-endif else begin
-  minval = minvalue
-endelse
-
-if (maxvalue eq !NULL) then begin
-  maxval = n_elements(file)
-endif else begin
-  maxval = maxvalue
-endelse
-
-for i= minval,maxval,1 do begin
-  valid_epatrol, i, file,logfile
-clustnum = STRTRIM(i, 2)
-  print,'Cluster #'+ clustnum +' is complete'
-endfor
-end
-
-
-
-
-pro valid_epatrol, whichevent, infile, logfilein, verb=verb
 
 ;Default Output  
 thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,ysource:0.0D,xloc1:0.0D,yloc1:0.0D,xloc2:0.0D,yloc2:0.0D}
 
-
-  ;add_PATH, '/Users/glee/git/*',/exp
-;  add_PATH, '/Users/glee/git/get_data/', /exp
-;  add_PATH, '/Users/glee/git/gen_library/', /exp
-  ;output data file
+  ;Sets up read/write variables
   logfile=logfilein
-;  infile= 'compile_eventlist_visual_search_clusters_test.txt'
-file = infile
+  file = infile
  
+  ;Set up identification variables
 
-;set up identification variables
-
-clust = file.CLUSTID
-clusterid = clust[whichevent]
-thisline.cluster = clusterid
+  clust = file.CLUSTID
+  clusterid = clust[whichevent]
+  thisline.cluster = clusterid
+  
   ;set parameters for movie
+  
   cadence=6 ;x2 = 12 minutes between images
-  stmovie=5. ; = 5 hours before Eruption Patrol event start time
+  stmovie=0. ; = 0 hours before Eruption Patrol event start time
 
-  ;Read in eruption patrol events using HEK API
+;Read in eruption patrol events using HEK API
 
-d1 = file.DATEST
-d2 = file.DATEEN
-g1 = d1[whichevent]
-g2 = d2[whichevent]
-
-
- ;d1='2011-01-02T16:39:44'
-;d2='2011-01-02T17:19:44'
-
-;d1 = '6-Feb-2010 20:20:16.000'
-;d2 = '7-Feb-2010 08:19:12.000'
-
-
-  t1=anytim(g1)   ;-stmovie*3600.
+  ;Set up time variables
+  
+  d1 = file.DATEST
+  d2 = file.DATEEN
+  g1 = d1[whichevent]
+  g2 = d2[whichevent]
+  t1=anytim(g1)-stmovie*3600.
   t2=anytim(g2)
+  
+  ;Directory where program will fetch the images
 
-  ;make a directory to save the images in
-; take out later
-;evdir=time2file(d1)
   dir = '/archive/sdo/AIA/synoptic'
-;  spawn,'mkdir '+evdir,/sh
 
-  ;download the images
-
+  ;Finds http:// directories for the given files
 
   ff=getjsoc_synoptic_read(t1,t2,wave = 304,/nodat, $ ; cadence=20*60., $
     info=info,file=files,remfile=remfiles,outind=inds)
    
-
-  ;; Checks to see if Date exists
-  ;Prints in log file date, n/a
+  ;; Checks to see if there is data for the given date
   
   IF (ff[0] ne '') THEN BEGIN
 
-
-
+  ;Sets up variables about number of images to be read in
+  
   nimg=n_elements(ff)
-  ;nimg = 29
   imgnums=findgen(nimg)
   ff=ff[where(imgnums mod cadence eq 0)]
   nimg=n_elements(ff)
@@ -118,13 +97,9 @@ g2 = d2[whichevent]
   ;;goal: extract /2011/01/02/H1700/AIA20110102_1716_0304.fits
   ;done by doing: test = 'http://jsoc.stanford.edu/data/aia/synoptic//2011/01/02/H1700/AIA20110102_1716_0304.fits'
   ;c = strmid(teststr, 43)
-  ;sock_copy,ff,out_dir=evdir+'/'
-
-  ;read in the images
-
-  ;ffloc=file_search(evdir+'/*.fits')
   
-  ;;Sets up file locations
+  ;;Converts http:// directories to a /yyyy/mm/dd/Hxxxx/ format
+  
   ffloc = ''
   FOR i=0, nimg-1 DO BEGIN
     IF (i eq 0) THEN BEGIN
@@ -134,16 +109,14 @@ g2 = d2[whichevent]
     ENDELSE
 
   ENDFOR 
+  
+  ;read in the images
 
   read_sdo,ffloc,indarr,datarr
 
+  ;Sets color table to one that is more natural looking for the sun
+
   loadct,3
-
-  ;play movie
-
-  ;for i=1,nimg-1,1 do begin &plot_image, alog10(datarr[*,*,i]), title = indarr[i].date_obs& &wait,0.1& endfor
-  ;for i=0, nimg-1, 1 do begin &plot_image, sqrt(datarr[*,*,i])& &wait,0.1& endfor
-;  for i=0, nimg-1,1 do begin & plot_image,alog10(datarr[*,*,i]),title = indarr[i].date_obs & &wait,0.1 & endfor
 
   ;display initial image, and have user pick out the source
 
@@ -152,8 +125,11 @@ g2 = d2[whichevent]
   counter = 0
 
   print, 'Ready!'
-  print, 'q - quit, d - back, f - forward, m - play movie, g - input time'
+  print, 'q - quit, s - skip current cluster, d - back, f - forward, m - play movie, g - input time'
   WHILE (keyin ne 'q') DO BEGIN
+    
+    ;Sets up array for scrolling through the images
+    
     index2map,indarr[counter],datarr[*,*,counter],imap
     plot_map,imap,/log
     time = indarr[counter].date_obs
@@ -162,6 +138,8 @@ g2 = d2[whichevent]
      if keyword_set(verb) THEN BEGIN
       print, keyin
      endif
+     
+     ;Plays images in a semi-fast sequence to give the appearance of a movie
      
      IF (keyin eq 'm') THEN BEGIN
 ;        for i=0, nimg-1,1 do begin & plot_image,alog10(datarr[*,*,i]),title = indarr[i].date_obs & &wait,0.1 & endfor
@@ -176,7 +154,7 @@ g2 = d2[whichevent]
     ;Takes in Event Related Statistics
 
     IF (keyin eq 'g') THEN BEGIN
-      print,'Click on the source location of the eruption'
+      print,'Click on the source location of the eruption, Right click to confirm your selection'
       xstore = 0
       ystore = 0
       mousenum = 0
@@ -209,9 +187,10 @@ g2 = d2[whichevent]
       thisline.ysource = yinit
     
 
-   ;Creates rough box of where event is
+   ;Creates bounding box of the event
    ERASE
    plot_map,imap,/log
+       print, 'Click two times to select a bounding box for the event, Right click to confirm your selection'
        print, 'Plot 2'
        mousenum2 = 0
        xstore1 = 0
@@ -220,6 +199,8 @@ g2 = d2[whichevent]
        ystore2 = 0
        counter1 = 0
        counter2 = 0
+       
+;Finds bounding box 
 
       WHILE(mousenum2 ne 4) DO BEGIN
           ;crosshair 1
@@ -306,11 +287,6 @@ g2 = d2[whichevent]
         ENDELSE
       endwhile
       
-      ;Fill in the data base for this event
-
-      ;thisline={sol:sol,eptim:eptim,tinit:tinit,xsource:xinit,ysource:yinit}
-;      thisline={available:'y',cluster:clusterid, flare:flareout, region:regionout,tinit:time,source:sourcepos,location:loc}
-
 ;Writes into data file
       thisline.available = 'y'
       write_data_file,thisline,filecsv=logfile,/append
@@ -327,17 +303,24 @@ g2 = d2[whichevent]
       IF (counter GT 0) THEN counter -=1
     ENDIF
 
+    ;Skips current cluster
 
+    IF (keyin eq 's') THEN BEGIN
+      thisline.available = 's'
+      thisline.tinit = g1
+      write_data_file,thisline,filecsv=logfile,/append
+      print, 'Written!'
+      BREAK
+    ENDIF
 
   ENDWHILE
+
   
   
   ;;Prints out log file for dates with no data
   ENDIF ELSE BEGIN
     print, 'There is no data for the date specified.'
-   ; thisline = {sol:sol,eptim:eptim,tinit:d1,'N/A'}
-;    thisline = {available:'n',cluster:clusterid,tinit:g1,xsource:0,ysource:0,xloc1:0,yloc1:0,xloc2:0,yloc2:0,evtype:'n'}
-    thisline.available = 'n'
+     thisline.available = 'n'
     thisline.tinit = g1
     write_data_file,thisline,filecsv=logfile,/append
     print, 'Written!'
@@ -347,4 +330,40 @@ g2 = d2[whichevent]
   print, 'Finished!'
   stop
 
+end
+
+pro valid_epatrol, minvalue, maxvalue
+
+  logfile='fe_times_sources.txt'
+  infile= 'compile_eventlist_visual_search_clusters_test.txt'
+
+  file = read_data_file(infile)
+  
+  ;Will automatically create a blank logfile in the current IDL directory if there is no existing one
+  if(~file_test(logfile)) then begin
+    thisline={available:'',cluster:'', flare:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
+    write_data_file,thisline,filecsv=logfile,/nodata
+    CD, Current=theDirectory
+    print, 'New File Written To ' + theDirectory
+  endif
+
+;Automatically sets minimum value to 0 if not specified
+  if (minvalue eq !NULL) then begin
+    minval = 0
+  endif else begin
+    minval = minvalue
+  endelse
+;Automatically sets the maximum value to the last value in the file read in
+  if (maxvalue eq !NULL) then begin
+    maxval = n_elements(file)
+  endif else begin
+    maxval = maxvalue
+  endelse
+
+;
+  for i= minval,maxval,1 do begin
+    run_epatrol, i, file,logfile
+    clustnum = STRTRIM(i, 2)
+    print,'Cluster #'+ clustnum +' is complete'
+  endfor
 end
