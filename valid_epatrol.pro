@@ -307,9 +307,10 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 
     IF (keyin eq 's') THEN BEGIN
       thisline.available = 's'
-      thisline.tinit = g1
+      thisline.tinit = anytim(g1, /ecs)
       write_data_file,thisline,filecsv=logfile,/append
       print, 'Written!'
+      print, 'Cluster #' + STRTRIM(whichevent, 2) + ' Skipped!'
       BREAK
     ENDIF
 
@@ -321,14 +322,13 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
   ENDIF ELSE BEGIN
     print, 'There is no data for the date specified.'
      thisline.available = 'n'
-    thisline.tinit = g1
+    thisline.tinit = anytim(g1, /ecs)
     write_data_file,thisline,filecsv=logfile,/append
     print, 'Written!'
   ENDELSE
 
 
   print, 'Finished!'
-  stop
 
 end
 

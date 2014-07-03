@@ -1,0 +1,6 @@
+#No header was supplied
+#To read this CSV file into IDL, run: IDL> readcol,'fe_times_sources.txt',available,cluster,flare,region,tinit,xsource,ysource,xloc1,yloc1,xloc2,yloc2,delim=';',comment='#',format='A,A,A,A,A,D,D,D,D,D,D'
+#FORMAT; A,A,A,A,A,D,D,D,D,D,D
+#AVAILABLE;CLUSTER;FLARE;REGION;TINIT;XSOURCE;YSOURCE;XLOC1;YLOC1;XLOC2;YLOC2
+n;0195;;;2010/02/06 20:20:16.000;      0.0000;      0.0000;      0.0000;      0.0000;      0.0000;      0.0000
+n;0196;;;2010/02/12 05:20:00.000;      0.0000;      0.0000;      0.0000;      0.0000;      0.0000;      0.0000
