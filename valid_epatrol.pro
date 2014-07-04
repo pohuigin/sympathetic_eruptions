@@ -41,25 +41,23 @@
 ;     valid_epatrol, min, max
 ;-
 
-pro run_epatrol, whichevent, infile, logfilein, verb=verb
-
+pro run_epatrol, whichevent, infile, logfilein, cadencein, verb=verb
 
 ;Default Output  
 thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,ysource:0.0D,xloc1:0.0D,yloc1:0.0D,xloc2:0.0D,yloc2:0.0D}
 
   ;Sets up read/write variables
   logfile=logfilein
-  file = infile
+  file = infile[whichevent]
  
   ;Set up identification variables
 
   clust = file.CLUSTID
-  clusterid = clust[whichevent]
-  thisline.cluster = clusterid
+  thisline.cluster = clust
   
   ;set parameters for movie
   
-  cadence=6 ;x2 = 12 minutes between images
+  cadence=cadencein ;x2 = 12 minutes between images
   stmovie=0. ; = 0 hours before Eruption Patrol event start time
 
 ;Read in eruption patrol events using HEK API
@@ -68,10 +66,8 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
   
   d1 = file.DATEST
   d2 = file.DATEEN
-  g1 = d1[whichevent]
-  g2 = d2[whichevent]
-  t1=anytim(g1)-stmovie*3600.
-  t2=anytim(g2)
+  t1=anytim(d1)-stmovie*3600.
+  t2=anytim(d2)
   
   ;Directory where program will fetch the images
 
@@ -99,7 +95,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
   ;c = strmid(teststr, 43)
   
   ;;Converts http:// directories to a /yyyy/mm/dd/Hxxxx/ format
-  
+
   ffloc = ''
   FOR i=0, nimg-1 DO BEGIN
     IF (i eq 0) THEN BEGIN
@@ -125,7 +121,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
   counter = 0
 
   print, 'Ready!'
-  print, 'q - quit, s - skip current cluster, d - back, f - forward, m - play movie, g - input time'
+  print, 'q - quit, s - skip current cluster, d - back, f - forward, e- list events, m - play movie, g - input time, c - set new cadence'
   WHILE (keyin ne 'q') DO BEGIN
     
     ;Sets up array for scrolling through the images
@@ -142,7 +138,6 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
      ;Plays images in a semi-fast sequence to give the appearance of a movie
      
      IF (keyin eq 'm') THEN BEGIN
-;        for i=0, nimg-1,1 do begin & plot_image,alog10(datarr[*,*,i]),title = indarr[i].date_obs & &wait,0.1 & endfor
         for i=0, nimg-1,1 do begin
           index2map,indarr[i],datarr[*,*,i],imap
           plot_map,imap,/log
@@ -150,7 +145,19 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
          endfor
 
      ENDIF
+    
+     ;Prints event date, latitude, longitude for all events in cluster
      
+     IF (keyin eq 'e') THEN BEGIN
+      evdatearr = strsplit(file.evdates,',',/extract)
+      evlatarr = strsplit(file.evlats,',',/extract)
+      evlonarr = strsplit(file.evlons,',',/extract)
+        for i=0, file.nevents-1 do begin
+          amin = hel2arcmin(evlatarr[i],evlonarr[i])
+          asec = [amin[0]*60.,amin[1]*60.]
+          print, 'Event #' + strtrim(i+1,2) + ' Event date: ' + evdatearr[i] + ' Longitude: ' + strtrim(asec[1],2) + ' Latitude: ' + strtrim(asec[0],2)
+        endfor
+     ENDIF
     ;Takes in Event Related Statistics
 
     IF (keyin eq 'g') THEN BEGIN
@@ -307,22 +314,34 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 
     IF (keyin eq 's') THEN BEGIN
       thisline.available = 's'
-      thisline.tinit = anytim(g1, /ecs)
+      thisline.tinit = anytim(d1, /vms)
       write_data_file,thisline,filecsv=logfile,/append
       print, 'Written!'
       print, 'Cluster #' + STRTRIM(whichevent, 2) + ' Skipped!'
       BREAK
     ENDIF
+    
+    IF (keyin eq 'c') THEN BEGIN
+      WHILE (0 ne 1) DO BEGIN
+      newint = 0
+      read, newint, prompt ='Type in a new cadence (default = 6): '
+      if(valid_num(newint, /integer)) THEN BEGIN
+      run_epatrol, whichevent, infile, logfilein, newint
+      break
+      endif else begin
+      print, 'Invalid Input'
+      endelse  
+      ENDWHILE
+;      break
+    ENDIF
 
   ENDWHILE
-
-  
   
   ;;Prints out log file for dates with no data
   ENDIF ELSE BEGIN
     print, 'There is no data for the date specified.'
      thisline.available = 'n'
-    thisline.tinit = anytim(g1, /ecs)
+    thisline.tinit = anytim(d1, /vms)
     write_data_file,thisline,filecsv=logfile,/append
     print, 'Written!'
   ENDELSE
@@ -348,13 +367,13 @@ pro valid_epatrol, minvalue, maxvalue
   endif
 
 ;Automatically sets minimum value to 0 if not specified
-  if (minvalue eq !NULL) then begin
+  if (n_elements(minvalue) eq 0) then begin
     minval = 0
   endif else begin
     minval = minvalue
   endelse
 ;Automatically sets the maximum value to the last value in the file read in
-  if (maxvalue eq !NULL) then begin
+  if (n_elements(maxvalue) eq 0) then begin
     maxval = n_elements(file)
   endif else begin
     maxval = maxvalue
@@ -362,7 +381,7 @@ pro valid_epatrol, minvalue, maxvalue
 
 ;
   for i= minval,maxval,1 do begin
-    run_epatrol, i, file,logfile
+    run_epatrol, i, file,logfile, 6
     clustnum = STRTRIM(i, 2)
     print,'Cluster #'+ clustnum +' is complete'
   endfor
