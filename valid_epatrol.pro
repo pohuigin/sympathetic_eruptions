@@ -44,7 +44,8 @@
 pro run_epatrol, whichevent, infile, logfilein, cadencein, verb=verb
 
 ;Default Output  
-thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,ysource:0.0D,xloc1:0.0D,yloc1:0.0D,xloc2:0.0D,yloc2:0.0D}
+;thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,ysource:0.0D,xloc1:0.0D,yloc1:0.0D,xloc2:0.0D,yloc2:0.0D}
+thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
 
   ;Sets up read/write variables
   logfile=logfilein
@@ -190,9 +191,10 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
       vline,xinit & hline,yinit
       print,xinit,yinit
       wait, 1.0
-      thisline.xsource = xinit
-      thisline.ysource = yinit
-    
+      
+;      thisline.xsource = xinit
+;      thisline.ysource = yinit
+      thisline.source = [xinit,yinit]
 
    ;Creates bounding box of the event
    ERASE
@@ -262,12 +264,12 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
       ENDWHILE
       
       
-      thisline.xloc1 = xstore1 & thisline.yloc1 = ystore1
-      thisline.xloc2 = xstore2 & thisline.yloc2 = ystore2
-           
-;      store1 = [xstore1,ystore1]
-;      store2 = [xstore2,ystore2]
-;      loc = [store1,store2]
+;      thisline.xloc1 = xstore1 & thisline.yloc1 = ystore1
+;      thisline.xloc2 = xstore2 & thisline.yloc2 = ystore2
+          
+      store1 = [xstore1,ystore1]
+      store2 = [xstore2,ystore2]
+      thisline.loc = [store1,store2]
       
       ERASE
       plot_map,imap,/log
@@ -360,7 +362,8 @@ pro valid_epatrol, minvalue, maxvalue
   
   ;Will automatically create a blank logfile in the current IDL directory if there is no existing one
   if(~file_test(logfile)) then begin
-    thisline={available:'',cluster:'', flare:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
+;    thisline={available:'',cluster:'', flare:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
+     thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
     write_data_file,thisline,filecsv=logfile,/nodata
     CD, Current=theDirectory
     print, 'New File Written To ' + theDirectory
