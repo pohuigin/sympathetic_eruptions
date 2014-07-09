@@ -54,7 +54,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
   ;Sets up read/write variables
   logfile=logfilein
   file = infile[whichevent]
- 
+  evdir = 'epatrol_data/'
   ;Set up identification variables
 
   clust = file.CLUSTID
@@ -315,7 +315,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 ;Writes into data file
       thisline.available = 'y'
       thisline.tinit = anytim(imap.time, /ecs)
-      write_data_file,thisline,filecsv=logfile,/append
+      write_data_file,thisline,filecsv=evdir+logfile,/append
       print, 'Written!'
       
 ;Create event snapshot if boolean snap is equal to true (1)
@@ -325,7 +325,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
         device, set_resolution = [1024,1024], decomp=0, set_pixel_depth=24
         loadct,3
         plot_map 
-        index2map,indarr[counter+1],datarr[*,*,counter+1],imap
+        index2map,indarr[counter+2],datarr[*,*,counter+2],imap
         plot_map,imap,/log,grid = 10, drange = [0, 2000]
         plotsym,0,2
         plots, xsource, ysource, ps = 8 ;Plot symbol to source location
@@ -335,7 +335,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
         pic = 0
         outfile = ''
         while (0 ne 1) do begin
-        outfile = 'evdat_' +strtrim(pic,2) + '.png'
+        outfile = evdir+'evdat_' +strtrim(pic,2) + '.png'
         if(~file_test(outfile)) then begin
           break
         endif else begin
@@ -364,7 +364,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
     IF (keyin eq 's') THEN BEGIN
       thisline.available = 's'
       thisline.tinit = anytim(d1, /ecs)
-      write_data_file,thisline,filecsv=logfile,/append
+      write_data_file,thisline,filecsv=evdir+logfile,/append
       print, 'Written!'
       print, 'Cluster #' + STRTRIM(whichevent, 2) + ' Skipped!'
       BREAK
@@ -391,7 +391,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
     print, 'There is no data for the date specified.'
      thisline.available = 'n'
     thisline.tinit = anytim(d1, /ecs)
-    write_data_file,thisline,filecsv=logfile,/append
+    write_data_file,thisline,filecsv=evdir+logfile,/append
     print, 'Written!'
   ENDELSE
 
@@ -404,18 +404,19 @@ pro valid_epatrol, minvalue, maxvalue
 
   logfile='fe_times_sources.txt'
   infile= 'compile_eventlist_visual_search_clusters_test.txt'
-
+  evdir = 'epatrol_data/'
+  spawn, 'mkdir '+evdir,/sh
   file = read_data_file(infile)
   
   ;Will automatically create a blank logfile in the current IDL directory if there is no existing one
   if(~file_test(logfile)) then begin
     thisline={available:'',cluster:'', flare:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
 ;     thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
-    write_data_file,thisline,filecsv=logfile,/nodata
+    write_data_file,thisline,filecsv=evdir+logfile,/nodata
     CD, Current=theDirectory
     print, 'New File Written To ' + theDirectory
   endif
-
+stop
 ;Automatically sets minimum value to 0 if not specified
   if (n_elements(minvalue) eq 0) then begin
     minval = 0
