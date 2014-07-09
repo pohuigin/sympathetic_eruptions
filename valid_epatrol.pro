@@ -24,6 +24,10 @@
 ;     The program will read in values from compile_eventlist_visual_search_clusters_test.txt by default
 ;     The default cadence is 1 frame every 12 minutes
 ;     The first cluster is cluster #0
+;     
+;     The longitude/latitude obtained by pushing 'e' within the program is in heliographic degrees
+;     The output longitude/latitude is in arcseconds
+;     Output filetime format is in ecs
 ;
 ;Author:
 ;     
@@ -44,8 +48,8 @@
 pro run_epatrol, whichevent, infile, logfilein, cadencein, verb=verb
 
 ;Default Output  
-;thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,ysource:0.0D,xloc1:0.0D,yloc1:0.0D,xloc2:0.0D,yloc2:0.0D}
-thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
+thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,ysource:0.0D,xloc1:0.0D,yloc1:0.0D,xloc2:0.0D,yloc2:0.0D}
+;thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
 
   ;Sets up read/write variables
   logfile=logfilein
@@ -59,7 +63,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
   ;set parameters for movie
   
   cadence=cadencein ;x2 = 12 minutes between images
-  stmovie=0. ; = 0 hours before Eruption Patrol event start time
+  stmovie=3. ; = 3 hours before Eruption Patrol event start time
 
 ;Read in eruption patrol events using HEK API
 
@@ -109,7 +113,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
   
   ;read in the images
 
-  read_sdo,ffloc,indarr,datarr
+  read_sdo,ffloc,indarr,datarr,/noshell
 
   ;Sets color table to one that is more natural looking for the sun
 
@@ -120,15 +124,15 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
 
   keyin = ''
   counter = 0
-
+  snap = 0
   print, 'Ready!'
-  print, 'q - quit, s - skip current cluster, d - back, f - forward, e- list events, m - play movie, g - input time, c - set new cadence'
+  print, 'q - quit, s - skip current cluster, d - back, f - forward, e- list events, m - play movie, g - input data, c - set new cadence, i - toggle automatic event snapshots'
   WHILE (keyin ne 'q') DO BEGIN
     
     ;Sets up array for scrolling through the images
     
     index2map,indarr[counter],datarr[*,*,counter],imap
-    plot_map,imap,/log
+    plot_map,imap,/log,grid = 10, drange = [0, 2000]
     time = indarr[counter].date_obs
     thisline.tinit = time
     keyin = get_kbrd()
@@ -138,10 +142,21 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
      
      ;Plays images in a semi-fast sequence to give the appearance of a movie
      
+     IF (keyin eq 'i') THEN BEGIN
+        IF (snap eq 0) THEN BEGIN
+          snap = 1
+          print,'Automatic event snapshots are now enabled!'
+          ENDIF ELSE BEGIN
+            snap = 0
+            print, 'Automatic event snapshots are now disabled!'
+          ENDELSE
+          
+     ENDIF
+     
      IF (keyin eq 'm') THEN BEGIN
         for i=0, nimg-1,1 do begin
           index2map,indarr[i],datarr[*,*,i],imap
-          plot_map,imap,/log
+          plot_map,imap,/log, grid = 10, /noerase
           wait,0.1
          endfor
 
@@ -154,17 +169,19 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
       evlatarr = strsplit(file.evlats,',',/extract)
       evlonarr = strsplit(file.evlons,',',/extract)
         for i=0, file.nevents-1 do begin
-          amin = hel2arcmin(evlatarr[i],evlonarr[i])
-          asec = [amin[0]*60.,amin[1]*60.]
-          print, 'Event #' + strtrim(i+1,2) + ' Event date: ' + evdatearr[i] + ' Longitude: ' + strtrim(asec[1],2) + ' Latitude: ' + strtrim(asec[0],2)
+;          amin = hel2arcmin(evlatarr[i],evlonarr[i])
+;          asec = [amin[0]*60.,amin[1]*60.]
+
+          print, 'Event #' + strtrim(i+1,2) + ' Event date: ' + evdatearr[i] + ' Longitude: ' + evlonarr[i] + ' Latitude: ' + evlatarr[i]
         endfor
      ENDIF
     ;Takes in Event Related Statistics
 
     IF (keyin eq 'g') THEN BEGIN
+      set_plot,'x'
       print,'Click on the source location of the eruption, Right click to confirm your selection'
-      xstore = 0
-      ystore = 0
+      xsource = 0
+      ysource = 0
       mousenum = 0
 
 
@@ -175,30 +192,29 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
         mousenum = !mouse.button
 
         IF(mousenum eq 1) THEN BEGIN
-          xstore = xinit & ystore = yinit
+          xsource = xinit & ysource = yinit
           ERASE
-           plot_map,imap,/log
-          vline,xinit & hline,yinit
+           plot_map,imap,/log, grid = 10
+          vline,xsource & hline,ysource
         ENDIF
         IF(mousenum eq 4) THEN BEGIN
-          xinit = xstore & yinit = ystore
+          xinit = xsource & yinit = ysource
           mousenum = 0
           mousenum2 = 0
           BREAK
         ENDIF
         wait,0.05
       ENDWHILE
-      vline,xinit & hline,yinit
-      print,xinit,yinit
+      vline,xsource & hline,ysource
+      print,xsource,ysource
       wait, 1.0
       
-;      thisline.xsource = xinit
-;      thisline.ysource = yinit
-      thisline.source = [xinit,yinit]
-
+      thisline.xsource = xsource
+      thisline.ysource = ysource
+;      thisline.source = [xinit,yinit]
    ;Creates bounding box of the event
    ERASE
-   plot_map,imap,/log
+   plot_map,imap,/log, grid = 10
        print, 'Click two times to select a bounding box for the event, Right click to confirm your selection'
        print, 'Plot 2'
        mousenum2 = 0
@@ -227,7 +243,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
           ENDIF ELSE BEGIN
           ;Replots points
             ERASE
-            plot_map,imap,/log
+            plot_map,imap,/log, grid = 10
             vline,xstore1 & hline,ystore1
             vline,xstore2 & hline,ystore2
             print, '1 done'
@@ -252,7 +268,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
           ENDIF ELSE BEGIN
           ;Replots points
             ERASE
-            plot_map,imap,/log
+            plot_map,imap,/log, grid = 10
             vline,xstore1 & hline,ystore1
             vline,xstore2 & hline,ystore2
             print, '2 done'
@@ -264,15 +280,15 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
       ENDWHILE
       
       
-;      thisline.xloc1 = xstore1 & thisline.yloc1 = ystore1
-;      thisline.xloc2 = xstore2 & thisline.yloc2 = ystore2
+      thisline.xloc1 = xstore1 & thisline.yloc1 = ystore1
+      thisline.xloc2 = xstore2 & thisline.yloc2 = ystore2
           
-      store1 = [xstore1,ystore1]
-      store2 = [xstore2,ystore2]
-      thisline.loc = [store1,store2]
+;      store1 = [xstore1,ystore1]
+;      store2 = [xstore2,ystore2]
+;      thisline.loc = [store1,store2]
       
       ERASE
-      plot_map,imap,/log
+      plot_map,imap,/log, grid = 10
       
       while (0 ne 1) DO BEGIN
         print, 'Flare or no flare? (f/n)'
@@ -298,8 +314,39 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
       
 ;Writes into data file
       thisline.available = 'y'
+      thisline.tinit = anytim(imap.time, /ecs)
       write_data_file,thisline,filecsv=logfile,/append
       print, 'Written!'
+      
+;Create event snapshot if boolean snap is equal to true (1)
+      
+      IF (snap eq 1) THEN BEGIN
+        setplot, 'z'
+        device, set_resolution = [1024,1024], decomp=0, set_pixel_depth=24
+        loadct,3
+        plot_map 
+        index2map,indarr[counter+1],datarr[*,*,counter+1],imap
+        plot_map,imap,/log,grid = 10, drange = [0, 2000]
+        plotsym,0,2
+        plots, xsource, ysource, ps = 8 ;Plot symbol to source location
+;        oplot, [xstore1,xstore2,xstore2,xstore1,xstore1],[ystore1,ystore1,ystore2,ystore2,ystore1] ;Bounding Box /does not seem to work
+        zb_plot = tvrd(true=1)
+        
+        pic = 0
+        outfile = ''
+        while (0 ne 1) do begin
+        outfile = 'evdat_' +strtrim(pic,2) + '.png'
+        if(~file_test(outfile)) then begin
+          break
+        endif else begin
+          pic += 1
+        endelse
+        endwhile
+        write_png,outfile,zb_plot
+        set_plot,'x'
+        print, 'Snapshot taken!'
+        
+      ENDIF
     ENDIF
 
 
@@ -316,7 +363,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
 
     IF (keyin eq 's') THEN BEGIN
       thisline.available = 's'
-      thisline.tinit = anytim(d1, /vms)
+      thisline.tinit = anytim(d1, /ecs)
       write_data_file,thisline,filecsv=logfile,/append
       print, 'Written!'
       print, 'Cluster #' + STRTRIM(whichevent, 2) + ' Skipped!'
@@ -343,7 +390,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc
   ENDIF ELSE BEGIN
     print, 'There is no data for the date specified.'
      thisline.available = 'n'
-    thisline.tinit = anytim(d1, /vms)
+    thisline.tinit = anytim(d1, /ecs)
     write_data_file,thisline,filecsv=logfile,/append
     print, 'Written!'
   ENDELSE
@@ -362,8 +409,8 @@ pro valid_epatrol, minvalue, maxvalue
   
   ;Will automatically create a blank logfile in the current IDL directory if there is no existing one
   if(~file_test(logfile)) then begin
-;    thisline={available:'',cluster:'', flare:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
-     thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
+    thisline={available:'',cluster:'', flare:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
+;     thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
     write_data_file,thisline,filecsv=logfile,/nodata
     CD, Current=theDirectory
     print, 'New File Written To ' + theDirectory
