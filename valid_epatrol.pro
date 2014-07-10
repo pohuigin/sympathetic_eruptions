@@ -126,18 +126,34 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
   counter = 0
   snap = 0
   evplot = 0
+  difmap = 0
   evlist = []
   print, 'Ready!'
   print, 'q - quit, s - skip current cluster, d - back, f - forward, e- list events, m - play movie, g - input data, c - set new cadence'
-  print, 'i - toggle automatic event snapshots, o - toggle event location plotting'
+  print, 'i - toggle automatic event snapshots, o - toggle event location plotting, u - toggle difference ratio maps'
   WHILE (keyin ne 'q') DO BEGIN
     
     ;Sets up array for scrolling through the images
-    
+    if(difmap eq 0) then begin
     index2map,indarr[counter],datarr[*,*,counter],imap
     plot_map,imap,/log,grid = 10, drange = [0, 2000]
     time = indarr[counter].date_obs
     thisline.tinit = anytim(time,/ecs)
+    endif else begin
+      if(difmap eq 1) then begin
+         index2map,indarr[counter],datarr[*,*,counter],map1
+         index2map,indarr[counter+1],datarr[*,*,counter+1],map2
+         diff = map2
+         diff.data = (map2.data-map1.data)/map2.data
+         plot_map,diff,/log,grid = 10, drange = [0, 1]
+      endif else begin
+        print, 'Something went wrong!'
+        print, 'Resetting.'
+        difmap = 0
+      endelse
+    endelse
+    
+    
     
     ;Plots points in event list
     
@@ -153,6 +169,18 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
      if keyword_set(verb) THEN BEGIN
       print, keyin
      endif
+     
+     ;Toggles Difference Ratio Maps
+     IF (keyin eq 'u') THEN BEGIN
+       IF (difmap eq 0) THEN BEGIN
+         difmap = 1
+         print,'Now plotting in difference ratio maps!'
+       ENDIF ELSE BEGIN
+         difmap = 0
+         print, 'Now plotting from telescope data!'
+       ENDELSE
+
+     ENDIF
      
      ;Toggles automatic event snapshots, more in input data section
      
@@ -182,11 +210,21 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
       ;Plays images in a semi-fast sequence to give the appearance of a movie
      
      IF (keyin eq 'm') THEN BEGIN
+      IF(difmap eq 0) THEN BEGIN 
         for i=0, nimg-1,1 do begin
           index2map,indarr[i],datarr[*,*,i],imap
           plot_map,imap,/log, grid = 10, /noerase, drange = [0, 2000]
           wait,0.1
          endfor
+      ENDIF ELSE BEGIN
+        for i=0, nimg-2,1 do begin
+        index2map,indarr[i],datarr[*,*,i],map1
+        index2map,indarr[i+1],datarr[*,*,i+1],map2
+        diff = map2
+        diff.data = (map2.data-map1.data)/map2.data
+        plot_map,diff,/log,grid = 10, drange = [0, 1],/noerase
+        endfor
+      ENDELSE
 
      ENDIF
     
@@ -380,7 +418,11 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 
 
     IF (keyin eq 'f') THEN BEGIN
-      IF (counter NE nimg-1) THEN counter +=1
+      IF (difmap eq 0) THEN BEGIN
+        IF (counter NE nimg-1) THEN counter +=1
+      ENDIF ELSE BEGIN
+        IF (counter NE nimg-2) THEN counter +=1
+      ENDELSE
     ENDIF
 
     IF (keyin eq 'd') THEN BEGIN
