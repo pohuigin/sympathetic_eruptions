@@ -125,8 +125,11 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
   keyin = ''
   counter = 0
   snap = 0
+  evplot = 0
+  evlist = []
   print, 'Ready!'
-  print, 'q - quit, s - skip current cluster, d - back, f - forward, e- list events, m - play movie, g - input data, c - set new cadence, i - toggle automatic event snapshots'
+  print, 'q - quit, s - skip current cluster, d - back, f - forward, e- list events, m - play movie, g - input data, c - set new cadence'
+  print, 'i - toggle automatic event snapshots, o - toggle event location plotting'
   WHILE (keyin ne 'q') DO BEGIN
     
     ;Sets up array for scrolling through the images
@@ -134,13 +137,24 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
     index2map,indarr[counter],datarr[*,*,counter],imap
     plot_map,imap,/log,grid = 10, drange = [0, 2000]
     time = indarr[counter].date_obs
-    thisline.tinit = time
+    thisline.tinit = anytim(time,/ecs)
+    
+    ;Plots points in event list
+    
+    IF (evplot eq 1) and (n_elements(evlist) ne 0) THEN BEGIN
+      plotsym,0,2
+      for i=0,n_elements(evlist)/2-1 do begin
+        plots,evlist[0,i],evlist[1,i],ps = 8,COLOR = 16711680 ;blue
+      endfor
+      print, 'Plotted!'
+    ENDIF
+    
     keyin = get_kbrd()
      if keyword_set(verb) THEN BEGIN
       print, keyin
      endif
      
-     ;Plays images in a semi-fast sequence to give the appearance of a movie
+     ;Toggles automatic event snapshots, more in input data section
      
      IF (keyin eq 'i') THEN BEGIN
         IF (snap eq 0) THEN BEGIN
@@ -153,10 +167,24 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
           
      ENDIF
      
+     ;Toggles event location plotting for current cluster
+
+     IF (keyin eq 'o') THEN BEGIN
+         IF (evplot eq 0) THEN BEGIN
+          evplot = 1
+          print,'Event plotting is now enabled!'
+          ENDIF ELSE BEGIN
+            evplot = 0
+            print, 'Event plotting is now disabled'
+          ENDELSE
+     ENDIF
+
+      ;Plays images in a semi-fast sequence to give the appearance of a movie
+     
      IF (keyin eq 'm') THEN BEGIN
         for i=0, nimg-1,1 do begin
           index2map,indarr[i],datarr[*,*,i],imap
-          plot_map,imap,/log, grid = 10, /noerase
+          plot_map,imap,/log, grid = 10, /noerase, drange = [0, 2000]
           wait,0.1
          endfor
 
@@ -194,7 +222,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
         IF(mousenum eq 1) THEN BEGIN
           xsource = xinit & ysource = yinit
           ERASE
-           plot_map,imap,/log, grid = 10
+           plot_map,imap,/log, grid = 10, drange = [0, 2000]
           vline,xsource & hline,ysource
         ENDIF
         IF(mousenum eq 4) THEN BEGIN
@@ -211,10 +239,11 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
       
       thisline.xsource = xsource
       thisline.ysource = ysource
+      evlist = [[evlist],[xsource,ysource]]
 ;      thisline.source = [xinit,yinit]
    ;Creates bounding box of the event
    ERASE
-   plot_map,imap,/log, grid = 10
+   plot_map,imap,/log, grid = 10, drange = [0, 2000]
        print, 'Click two times to select a bounding box for the event, Right click to confirm your selection'
        print, 'Plot 2'
        mousenum2 = 0
@@ -243,7 +272,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
           ENDIF ELSE BEGIN
           ;Replots points
             ERASE
-            plot_map,imap,/log, grid = 10
+            plot_map,imap,/log, grid = 10, drange = [0, 2000]
             vline,xstore1 & hline,ystore1
             vline,xstore2 & hline,ystore2
             print, '1 done'
@@ -268,7 +297,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
           ENDIF ELSE BEGIN
           ;Replots points
             ERASE
-            plot_map,imap,/log, grid = 10
+            plot_map,imap,/log, grid = 10, drange = [0, 2000]
             vline,xstore1 & hline,ystore1
             vline,xstore2 & hline,ystore2
             print, '2 done'
@@ -288,7 +317,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 ;      thisline.loc = [store1,store2]
       
       ERASE
-      plot_map,imap,/log, grid = 10
+      plot_map,imap,/log, grid = 10, drange = [0, 2000]
       
       while (0 ne 1) DO BEGIN
         print, 'Flare or no flare? (f/n)'
@@ -324,7 +353,6 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
         setplot, 'z'
         device, set_resolution = [1024,1024], decomp=0, set_pixel_depth=24
         loadct,3
-        plot_map 
         index2map,indarr[counter+2],datarr[*,*,counter+2],imap
         plot_map,imap,/log,grid = 10, drange = [0, 2000]
         plotsym,0,2
@@ -409,14 +437,13 @@ pro valid_epatrol, minvalue, maxvalue
   file = read_data_file(infile)
   
   ;Will automatically create a blank logfile in the current IDL directory if there is no existing one
-  if(~file_test(logfile)) then begin
+  if(~file_test(evdir+logfile)) then begin
     thisline={available:'',cluster:'', flare:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
 ;     thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
     write_data_file,thisline,filecsv=evdir+logfile,/nodata
     CD, Current=theDirectory
     print, 'New File Written To ' + theDirectory
   endif
-stop
 ;Automatically sets minimum value to 0 if not specified
   if (n_elements(minvalue) eq 0) then begin
     minval = 0
