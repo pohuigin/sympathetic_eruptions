@@ -45,7 +45,7 @@
 ;     valid_epatrol, min, max
 ;-
 
-pro run_epatrol, whichevent, infile, logfilein, cadencein, verb=verb
+pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, verb=verb
 
 ;Default Output  
 thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,ysource:0.0D,xloc1:0.0D,yloc1:0.0D,xloc2:0.0D,yloc2:0.0D}
@@ -124,19 +124,23 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 
   keyin = ''
   counter = 0
-  snap = 0
-  evplot = 0
-  difmap = 0
+;  snap = 0
+;  evplot = 0
+;  difmap = 0
   evlist = []
   print, 'Ready!'
-  print, 'q - quit, s - skip current cluster, d - back, f - forward, e- list events, m - play movie, g - input data, c - set new cadence'
-  print, 'i - toggle automatic event snapshots, o - toggle event location plotting, u - toggle difference ratio maps'
+  h1 = 'Press h to view this message again'
+  h2 = 'q - quit, s - skip current cluster, d - back, f - forward, e- list events, m - play movie, g - input data, c - set new cadence'
+  h3 = 'i - toggle automatic event snapshots, o - toggle event location plotting, u - toggle difference ratio maps'
+  print, h1
+  print, h2
+  print, h3
   WHILE (keyin ne 'q') DO BEGIN
-    
+
     ;Sets up array for scrolling through the images
     if(difmap eq 0) then begin
     index2map,indarr[counter],datarr[*,*,counter],imap
-    plot_map,imap,/log,grid = 10, drange = [0, 2000]
+    plot_map,imap,/log,grid = 10, drange = [0, 2000],lcolor = 0
     time = indarr[counter].date_obs
     thisline.tinit = anytim(time,/ecs)
     endif else begin
@@ -160,15 +164,24 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
     IF (evplot eq 1) and (n_elements(evlist) ne 0) THEN BEGIN
       plotsym,0,2
       for i=0,n_elements(evlist)/2-1 do begin
-        plots,evlist[0,i],evlist[1,i],ps = 8,COLOR = 16711680 ;blue
+        plots,evlist[0,i],evlist[1,i],ps = 8,color = 16711680 ;blue
       endfor
-      print, 'Plotted!'
+;       print, 'Plotted!'
     ENDIF
     
     keyin = get_kbrd()
      if keyword_set(verb) THEN BEGIN
-      print, keyin
+       print, keyin
      endif
+     
+     ;Print help message
+     IF (keyin eq 'h') THEN BEGIN
+       print, h1
+       print, h2
+       print, h3
+     ENDIF
+     
+     IF (keyin eq '~') THEN STOP
      
      ;Toggles Difference Ratio Maps
      IF (keyin eq 'u') THEN BEGIN
@@ -394,7 +407,8 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
         index2map,indarr[counter+2],datarr[*,*,counter+2],imap
         plot_map,imap,/log,grid = 10, drange = [0, 2000]
         plotsym,0,2
-        plots, xsource, ysource, ps = 8 ;Plot symbol to source location
+        plots, xsource, ysource, ps = 8, color = 0 ;Plot symbol to source location
+        xyouts,-700,1400,'Evtime:'+ string(thisline.tinit)+ ' Region:'+string(thisline.region)+ ' Flare:' + string(thisline.flare),font = 42
 ;        oplot, [xstore1,xstore2,xstore2,xstore1,xstore1],[ystore1,ystore1,ystore2,ystore2,ystore1] ;Bounding Box /does not seem to work
         zb_plot = tvrd(true=1)
         
@@ -408,6 +422,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
           pic += 1
         endelse
         endwhile
+;xyouts,1,1,'Evtime:'+ string(thisline.tinit)+ ' Region:'+string(thisline.region)+ ' Flare:' + string(thisline.flare),font = 32
         write_png,outfile,zb_plot
         set_plot,'x'
         print, 'Snapshot taken!'
@@ -471,18 +486,26 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 end
 
 pro valid_epatrol, minvalue, maxvalue
-
+  
+  ;Set in/out file names
+  
   logfile='fe_times_sources.txt'
   infile= 'compile_eventlist_visual_search_clusters_test.txt'
   evdir = 'epatrol_data/'
   spawn, 'mkdir '+evdir,/sh
   file = read_data_file(infile)
   
+  ;Settings for run_epatrol
+  mapenv = 0
+  snapenv = 0
+  plotenv = 0
+  
   ;Will automatically create a blank logfile in the current IDL directory if there is no existing one
   if(~file_test(evdir+logfile)) then begin
     thisline={available:'',cluster:'', flare:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
 ;     thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
-    write_data_file,thisline,filecsv=evdir+logfile,/nodata
+    head = '#Event Patrol Data'
+    write_data_file,thisline,filecsv=evdir+logfile,/nodata, header = head
     CD, Current=theDirectory
     print, 'New File Written To ' + theDirectory
   endif
@@ -501,8 +524,9 @@ pro valid_epatrol, minvalue, maxvalue
 
 ;
   for i= minval,maxval,1 do begin
-    run_epatrol, i, file,logfile, 6
+    run_epatrol, i, file,logfile, 6, mapenv,snapenv,plotenv
     clustnum = STRTRIM(i, 2)
     print,'Cluster #'+ clustnum +' is complete'
+    stop
   endfor
 end
