@@ -321,9 +321,13 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
 
         thisline.xsource = xsource
         thisline.ysource = ysource
-        evlist = [[evlist],[xsource,ysource]]
-        ;      thisline.source = [xinit,yinit]
-        ;Creates bounding box of the event
+        IF (evlist[0,0] ne 0) and (evlist[1,0] ne 0)  THEN BEGIN
+          evlist = [[evlist],[xsource,ysource]]
+          ;      thisline.source = [xinit,yinit]
+          ;Creates bounding box of the event
+        ENDIF ELSE BEGIN
+          evlist = [xsource,ysource]
+        ENDELSE
         ERASE
         if(difmap eq 0) then begin
           plot_map,imap,/log,grid = 10, drange = [0, 2000]
@@ -583,7 +587,7 @@ pro valid_epatrol, minvalue, maxvalue
   ;Set in/out file names
 
   logfile='fe_times_sources.txt'
-  infile= 'compile_eventlist_visual_search_clusters_test.txt'
+  infile= 'compile_eventlist_visual_search_clusters.txt'
   evdir = 'epatrol_data/'
   spawn, 'mkdir '+evdir,/sh
   file = read_data_file(infile)
