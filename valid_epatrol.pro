@@ -135,6 +135,9 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
   print, h1
   print, h2
   print, h3
+  
+  window,0,xsize=1024,ysize=1024
+  
   WHILE (keyin ne 'q') DO BEGIN
 
     ;Sets up array for scrolling through the images
@@ -415,14 +418,13 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
         pic = 0
         outfile = ''
         while (0 ne 1) do begin
-        outfile = evdir+'evdat_' +strtrim(pic,2) + '.png'
+        outfile = evdir+'evdat_' +string(file.clustid)+'_'+string(pic,format = '(I02)') + '.png'
         if(~file_test(outfile)) then begin
           break
         endif else begin
           pic += 1
         endelse
         endwhile
-;xyouts,1,1,'Evtime:'+ string(thisline.tinit)+ ' Region:'+string(thisline.region)+ ' Flare:' + string(thisline.flare),font = 32
         write_png,outfile,zb_plot
         set_plot,'x'
         print, 'Snapshot taken!'
