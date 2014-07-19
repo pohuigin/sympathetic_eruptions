@@ -51,7 +51,7 @@
 pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, verb=verb
 
   ;Default Output
-  thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,ysource:0.0D,xloc1:0.0D,yloc1:0.0D,xloc2:0.0D,yloc2:0.0D}
+  thisline={available:'',cluster:'', flare:'', surge:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
   ;thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
 
   ;Sets up read/write variables
@@ -426,10 +426,21 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
         endelse
 
         while (0 ne 1) DO BEGIN
-          print, 'Flare or no flare? (f/n)'
+          print, 'Flare? (y/n)'
           type = get_kbrd()
-          IF (type eq 'f') or (type eq 'n')THEN BEGIN
+          IF (type eq 'y') or (type eq 'n')THEN BEGIN
             thisline.flare = type
+            BREAK
+          ENDIF ELSE BEGIN
+            print, 'Input Is Not Valid'
+          ENDELSE
+        endwhile
+        
+        while (0 ne 1) DO BEGIN
+          print, 'Surge? (y/n)'
+          type = get_kbrd()
+          IF (type eq 'y') or (type eq 'n')THEN BEGIN
+            thisline.surge = type
             BREAK
           ENDIF ELSE BEGIN
             print, 'Input Is Not Valid'
@@ -491,7 +502,7 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
             endelse
           endelse
           
-          xyouts,-800,1400,'Cluster ID:' +string(thisline.cluster) +' Evtime: '+ string(thisline.tinit)+ ' Region: '+string(thisline.region)+ ' Flare: ' + string(thisline.flare),font = 42
+          xyouts,-800,1400,'Cluster ID:' +string(thisline.cluster) +' Evtime: '+ string(thisline.tinit)+ ' Region: '+string(thisline.region)+ ' Flare: ' + string(thisline.flare) + ' Surge: ' + string(thisline.surge),font = 42
           ;        oplot, [xstore1,xstore2,xstore2,xstore1,xstore1],[ystore1,ystore1,ystore2,ystore2,ystore1] ;Bounding Box /does not seem to work
           zb_plot = tvrd(true=1)
 
@@ -584,7 +595,7 @@ pro valid_epatrol, minvalue, maxvalue
 
   ;Will automatically create a blank logfile in the current IDL directory if there is no existing one
   if(~file_test(evdir+logfile)) then begin
-    thisline={available:'',cluster:'', flare:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
+    thisline={available:'',cluster:'', flare:'', surge:'', region:'',tinit:'', xsource:0.0D, ysource:0.0D, xloc1:0.0D, yloc1:0.0D, xloc2:0.0D, yloc2:0.0D}
     ;     thisline={available:'',cluster:'', flare:'', region:'',tinit:'',source:[0,0],loc:[[0,0],[0,0]]}
     head = '#Event Patrol Data'
     write_data_file,thisline,filecsv=evdir+logfile,/nodata, header = head
