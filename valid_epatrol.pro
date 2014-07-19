@@ -34,6 +34,9 @@
 ;     George Lee
 ;     Intern At LMASAL
 ;     Email: glee@lmsal.com
+;     
+;Version of IDL used to test this program: 8.3
+;Warning: Some routines or variables will fail to work for older versions of IDL
 ;
 ;
 ;Running this program:
@@ -93,6 +96,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
   imgnums=findgen(nimg)
   ff=ff[where(imgnums mod cadence eq 0)]
   nimg=n_elements(ff)
+  set_plot, 'x'
   
   ;example return link :   http://jsoc.stanford.edu/data/aia/synoptic//2011/01/02/H1700/AIA20110102_1716_0304.fits
   ;;goal: extract /2011/01/02/H1700/AIA20110102_1716_0304.fits
@@ -127,7 +131,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 ;  snap = 0
 ;  evplot = 0
 ;  difmap = 0
-  evlist = []
+  evlist = ['','']
   print, 'Ready!'
   h1 = 'Press h to view this message again'
   h2 = 'q - quit, s - skip current cluster, d - back, f - forward, e- list events, m - play movie, g - input data, c - set new cadence'
@@ -141,9 +145,10 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
   WHILE (keyin ne 'q') DO BEGIN
 
     ;Sets up array for scrolling through the images
+    
     if(difmap eq 0) then begin
     index2map,indarr[counter],datarr[*,*,counter],imap
-    plot_map,imap,/log,grid = 10, drange = [0, 2000],lcolor = 0
+    plot_map,imap,/log,grid = 10, drange = [0, 2000]
     time = indarr[counter].date_obs
     thisline.tinit = anytim(time,/ecs)
     endif else begin
@@ -160,11 +165,17 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
       endelse
     endelse
     
-    
+    if(difmap eq 0) then begin
+        plot_map,imap,/log,grid = 10, drange = [0, 2000]
+    endif else begin
+      if(difmap eq 1) then begin
+        plot_map,diff,/log,grid = 10, drange = [0, 1]
+      endif
+    endelse
     
     ;Plots points in event list
     
-    IF (evplot eq 1) and (n_elements(evlist) ne 0) THEN BEGIN
+    IF (evplot eq 1) and (evlist[0,0] ne 0) and (evlist[1,0] ne 0) THEN BEGIN
       plotsym,0,2
       for i=0,n_elements(evlist)/2-1 do begin
         plots,evlist[0,i],evlist[1,i],ps = 8,color = 16711680 ;blue
@@ -190,7 +201,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
      IF (keyin eq 'u') THEN BEGIN
        IF (difmap eq 0) THEN BEGIN
          difmap = 1
-         print,'Now plotting in difference ratio maps!'
+         print,'Now plotting with difference ratio maps!'
        ENDIF ELSE BEGIN
          difmap = 0
          print, 'Now plotting from telescope data!'
@@ -229,6 +240,7 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
       IF(difmap eq 0) THEN BEGIN 
         for i=0, nimg-1,1 do begin
           index2map,indarr[i],datarr[*,*,i],imap
+          
           plot_map,imap,/log, grid = 10, /noerase, drange = [0, 2000]
           wait,0.1
          endfor
@@ -275,8 +287,16 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 
         IF(mousenum eq 1) THEN BEGIN
           xsource = xinit & ysource = yinit
+          
           ERASE
-           plot_map,imap,/log, grid = 10, drange = [0, 2000]
+           if(difmap eq 0) then begin
+            plot_map,imap,/log,grid = 10, drange = [0, 2000]
+           endif else begin
+            if(difmap eq 1) then begin
+              plot_map,diff,/log,grid = 10, drange = [0, 1]
+            endif
+          endelse
+          
           vline,xsource & hline,ysource
         ENDIF
         IF(mousenum eq 4) THEN BEGIN
@@ -297,7 +317,13 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 ;      thisline.source = [xinit,yinit]
    ;Creates bounding box of the event
    ERASE
-   plot_map,imap,/log, grid = 10, drange = [0, 2000]
+   if(difmap eq 0) then begin
+     plot_map,imap,/log,grid = 10, drange = [0, 2000]
+   endif else begin
+     if(difmap eq 1) then begin
+       plot_map,diff,/log,grid = 10, drange = [0, 1]
+     endif
+   endelse
        print, 'Click two times to select a bounding box for the event, Right click to confirm your selection'
        print, 'Plot 2'
        mousenum2 = 0
@@ -326,7 +352,13 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
           ENDIF ELSE BEGIN
           ;Replots points
             ERASE
-            plot_map,imap,/log, grid = 10, drange = [0, 2000]
+            if(difmap eq 0) then begin
+              plot_map,imap,/log,grid = 10, drange = [0, 2000]
+            endif else begin
+              if(difmap eq 1) then begin
+                plot_map,diff,/log,grid = 10, drange = [0, 1]
+              endif
+            endelse
             vline,xstore1 & hline,ystore1
             vline,xstore2 & hline,ystore2
             print, '1 done'
@@ -351,7 +383,13 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
           ENDIF ELSE BEGIN
           ;Replots points
             ERASE
-            plot_map,imap,/log, grid = 10, drange = [0, 2000]
+            if(difmap eq 0) then begin
+              plot_map,imap,/log,grid = 10, drange = [0, 2000]
+            endif else begin
+              if(difmap eq 1) then begin
+                plot_map,diff,/log,grid = 10, drange = [0, 1]
+              endif
+            endelse
             vline,xstore1 & hline,ystore1
             vline,xstore2 & hline,ystore2
             print, '2 done'
@@ -371,7 +409,13 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
 ;      thisline.loc = [store1,store2]
       
       ERASE
-      plot_map,imap,/log, grid = 10, drange = [0, 2000]
+      if(difmap eq 0) then begin
+        plot_map,imap,/log,grid = 10, drange = [0, 2000]
+      endif else begin
+        if(difmap eq 1) then begin
+          plot_map,diff,/log,grid = 10, drange = [0, 1]
+        endif
+      endelse
       
       while (0 ne 1) DO BEGIN
         print, 'Flare or no flare? (f/n)'
@@ -407,11 +451,28 @@ thisline={available:'',cluster:'', flare:'', region:'',tinit:'',xsource:0.0D,yso
         setplot, 'z'
         device, set_resolution = [1024,1024], decomp=0, set_pixel_depth=24
         loadct,3
-        index2map,indarr[counter+2],datarr[*,*,counter+2],imap
-        plot_map,imap,/log,grid = 10, drange = [0, 2000]
+        if(difmap eq 0) then begin
+          index2map,indarr[counter+2],datarr[*,*,counter+2],imap
+          plot_map,imap,/log,grid = 10, drange = [0, 2000]
+          time = indarr[counter].date_obs
+          thisline.tinit = anytim(time,/ecs)
+        endif else begin
+          if(difmap eq 1) then begin
+            index2map,indarr[counter+2],datarr[*,*,counter+2],map1
+            index2map,indarr[counter+3],datarr[*,*,counter+3],map2
+            diff = map2
+            diff.data = (map2.data-map1.data)/map2.data
+            plot_map,diff,/log,grid = 10, drange = [0, 1]
+          endif else begin
+            print, 'Something went wrong!'
+            print, 'Resetting.'
+            difmap = 0
+          endelse
+        endelse
+        
         plotsym,0,2
         plots, xsource, ysource, ps = 8, color = 0 ;Plot symbol to source location
-        xyouts,-700,1400,'Evtime:'+ string(thisline.tinit)+ ' Region:'+string(thisline.region)+ ' Flare:' + string(thisline.flare),font = 42
+        xyouts,-700,1400,'Cluster ID:' +string(thisline.cluster) +' Evtime: '+ string(thisline.tinit)+ ' Region: '+string(thisline.region)+ ' Flare: ' + string(thisline.flare),font = 42
 ;        oplot, [xstore1,xstore2,xstore2,xstore1,xstore1],[ystore1,ystore1,ystore2,ystore2,ystore1] ;Bounding Box /does not seem to work
         zb_plot = tvrd(true=1)
         
@@ -529,6 +590,5 @@ pro valid_epatrol, minvalue, maxvalue
     run_epatrol, i, file,logfile, 6, mapenv,snapenv,plotenv
     clustnum = STRTRIM(i, 2)
     print,'Cluster #'+ clustnum +' is complete'
-    stop
   endfor
 end
