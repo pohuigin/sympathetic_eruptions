@@ -158,13 +158,13 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
             index2map,indarr[counter+1],datarr[*,*,counter+1],map2
             diff = map1
             diff.data = (map1.data-map2.data)/map1.data
-            plot_map,diff,/log,grid = 10, drange = [0, 1]
+            plot_map,diff,/log,grid = 10, drange = [0.02, 1.75]
           endif else begin
             index2map,indarr[counter-1],datarr[*,*,counter-1],map1
             index2map,indarr[counter],datarr[*,*,counter],map2
             diff = map2
             diff.data = (map2.data-map1.data)/map2.data
-            plot_map,diff,/log,grid = 10, drange = [0, 1]
+            plot_map,diff,/log,grid = 10, drange = [0.02, 1.75]
           endelse
         endif else begin
           print, 'Something went wrong!'
@@ -173,13 +173,13 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
         endelse
       endelse
 
-      if(difmap eq 0) then begin
-        plot_map,imap,/log,grid = 10, drange = [0, 2000]
-      endif else begin
-        if(difmap eq 1) then begin
-          plot_map,diff,/log,grid = 10, drange = [0, 1]
-        endif
-      endelse
+;      if(difmap eq 0) then begin
+;        plot_map,imap,/log,grid = 10, drange = [0, 2000]
+;      endif else begin
+;        if(difmap eq 1) then begin
+;          plot_map,diff,/log,grid = 10, drange = [0.02, 1.75]
+;        endif
+;      endelse
 
       ;Plots points in event list
 
@@ -258,7 +258,7 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
             index2map,indarr[i+1],datarr[*,*,i+1],map2
             diff = map2
             diff.data = (map2.data-map1.data)/map2.data
-            plot_map,diff,/log,grid = 10, drange = [0, 1],/noerase
+            plot_map,diff,/log,grid = 10, drange = [0.02, 1.75],/noerase
           endfor
         ENDELSE
 
@@ -301,7 +301,7 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
               plot_map,imap,/log,grid = 10, drange = [0, 2000]
             endif else begin
               if(difmap eq 1) then begin
-                plot_map,diff,/log,grid = 10, drange = [0, 1]
+                plot_map,diff,/log,grid = 10, drange = [0.02, 1.75]
               endif
             endelse
 
@@ -333,7 +333,7 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
           plot_map,imap,/log,grid = 10, drange = [0, 2000]
         endif else begin
           if(difmap eq 1) then begin
-            plot_map,diff,/log,grid = 10, drange = [0, 1]
+            plot_map,diff,/log,grid = 10, drange = [0.02, 1.75]
           endif
         endelse
         print, 'Click two times to select a bounding box for the event, Right click to confirm your selection'
@@ -368,7 +368,7 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
                 plot_map,imap,/log,grid = 10, drange = [0, 2000]
               endif else begin
                 if(difmap eq 1) then begin
-                  plot_map,diff,/log,grid = 10, drange = [0, 1]
+                  plot_map,diff,/log,grid = 10, drange = [0.02, 1.75]
                 endif
               endelse
               vline,xstore1 & hline,ystore1
@@ -399,7 +399,7 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
                 plot_map,imap,/log,grid = 10, drange = [0, 2000]
               endif else begin
                 if(difmap eq 1) then begin
-                  plot_map,diff,/log,grid = 10, drange = [0, 1]
+                  plot_map,diff,/log,grid = 10, drange = [0.02, 1.75]
                 endif
               endelse
               vline,xstore1 & hline,ystore1
@@ -425,7 +425,7 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
           plot_map,imap,/log,grid = 10, drange = [0, 2000]
         endif else begin
           if(difmap eq 1) then begin
-            plot_map,diff,/log,grid = 10, drange = [0, 1]
+            plot_map,diff,/log,grid = 10, drange = [0.02, 1.75]
           endif
         endelse
 
@@ -452,9 +452,9 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
         endwhile
 
         while (0 ne 1) DO BEGIN
-          print, 'Event from an active region or quiet sun? (a/q)'
+          print, 'Event from an active region or quiet sun or unknown? (a/q/u)'
           type = get_kbrd()
-          IF (type eq 'a') or (type eq 'q')THEN BEGIN
+          IF (type eq 'a') or (type eq 'q') or (type eq 'u')THEN BEGIN
             thisline.region = type
             BREAK
           ENDIF ELSE BEGIN
@@ -489,14 +489,14 @@ pro run_epatrol, whichevent, infile, logfilein, cadencein, difmap,snap,evplot, v
                 index2map,indarr[counter+1],datarr[*,*,counter+1],map2
                 diff = map1
                 diff.data = (map1.data-map2.data)/map1.data
-                plot_map,diff,/log,grid = 10, drange = [0, 1]
+                plot_map,diff,/log,grid = 10, drange = [0.02, 1.75]
                 plots, xsource, ysource, ps = 8, color = 14772545;Plot symbol to source location
               endif else begin
                 index2map,indarr[counter-1],datarr[*,*,counter-1],map1
                 index2map,indarr[counter],datarr[*,*,counter],map2
                 diff = map2
                 diff.data = (map2.data-map1.data)/map2.data
-                plot_map,diff,/log,grid = 10, drange = [0, 1]
+                plot_map,diff,/log,grid = 10, drange = [0.02, 1.75]
                 plots, xsource, ysource, ps = 8, color = 14772545;Plot symbol to source location
               endelse
             endif else begin
