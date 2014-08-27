@@ -1,6 +1,8 @@
 ;2014-04-17: combine the NGDC and GOES flare lists. There seems to be many large flares in GOES list with no positions, and many NGDC Halpha flares with positions, but no goes class.
 ;Attempting to combine the two to get a more complete flare list
 
+;This code requires SSW and this repository: https://github.com/pohuigin/gen_library
+
 pro combine_goesxray_halpha_flare_lists,res1tore=res1tore
 
 dpath='~/science/data/helio_flare_lists/'
@@ -273,18 +275,18 @@ oplot,flrcombstr[where(flrcombstr.HALPHAMATCH eq 1)].gpk,flrcombstr[where(flrcom
 
 save,flrcombstr,goesarr,halphaarr,halphaline,goesline,file=savpath+'combine_goesxray_halpha_flare_lists-res1.sav'
 
-whclassmiss=where(FLRCOMBSTR.HCLASS eq '"' or FLRCOMBSTR.HCLASS eq '')
+;fix a couple of the columns that have odd blank values
+
+whclassmiss=where(FLRCOMBSTR.HCLASS eq '"' or FLRCOMBSTR.HCLASS eq '""')
 FLRCOMBSTR[whclassmiss].HCLASS='Z'
 
 whnoaamiss=where(FLRCOMBSTR.HNOAA eq -1)
 FLRCOMBSTR[whnoaamiss].HNOAA=0
 
-add_prop FLRCOMBSTR
-
 write_data_file,FLRCOMBSTR,file=savpath+'combine_goesxray_halpha_flare_lists.csv', $
 	header=['#GOES+Halpha+NAR lists are combined to create the most complete flare list with locations possible.','#GOES events are used as a base.','#Missing Values: HST=-1, HPK=-1, HEN=-1, HCLASS=Z, GNOAA=0, HNOAA=0, LAT=1000, LON=1000, HALPHAMATCH=-1, NARMATCH=-1']
 
-
+;publish the list....
 
 skiptores1:
 restore,savpath+'combine_goesxray_halpha_flare_lists-res1.sav',/ver
